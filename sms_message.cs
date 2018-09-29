@@ -32,6 +32,61 @@ namespace wp2droidMsg
 
         public SmsMessage() { }
 
+        public static List<SmsMessage> ReadMessagesFromWpXml(XmlReader xr)
+        {
+            if (!xr.Read())
+                return null;
+
+            List<SmsMessage> smses = new List<SmsMessage>();
+
+            bool fFoundMessageArray = false;
+            bool fValidExit = false;
+
+            while (true)
+            {
+                XmlNodeType nt = xr.NodeType;
+
+                if (nt == XmlNodeType.Element)
+                {
+                    if (!fFoundMessageArray && xr.Name == "ArrayOfMessage")
+                    {
+                        xr.ReadStartElement();
+                        fFoundMessageArray = true;
+                        continue;
+                    }
+
+                    // only other valid element is message
+                    if (xr.Name != "Message")
+                        throw new Exception($"Illegal element {xr.Name} under ArrayOfMessages");
+
+                    smses.Add(SmsMessage.CreateFromWindowsPhoneXmlReader(xr));
+                    continue;
+                }
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name == "ArrayOfMessage")
+                    {
+                        fValidExit = true;
+                        break; // yay done
+                    }
+
+                    throw new Exception($"end element {xr.Name} unexpected");
+                }
+
+                if (nt == XmlNodeType.Attribute)
+                    throw new Exception($"attribute unexpected per schema");
+
+                // all others are just skipped
+                if (!xr.Read())
+                    break;
+            }
+
+            if (!fValidExit)
+                throw new Exception("end of file before end message array");
+
+            return smses;
+        }
         #region Comparators
         public override bool Equals(Object obj)
         {
