@@ -8,6 +8,5 @@ namespace TCore.MMS
 {
     public class Class1
     {
-
     }
 }
