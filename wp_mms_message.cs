@@ -368,6 +368,62 @@ namespace wp2droidMsg
         }
         #endregion
 
+        public static List<WpMessage> ReadMessagesFromXml(XmlReader xr)
+        {
+            if (!xr.Read())
+                return null;
+
+            List<WpMessage> mmses = new List<WpMessage>();
+
+            bool fFoundMessageArray = false;
+            bool fValidExit = false;
+
+            while (true)
+            {
+                XmlNodeType nt = xr.NodeType;
+
+                if (nt == XmlNodeType.Element)
+                {
+                    if (!fFoundMessageArray && xr.Name == "ArrayOfMessage")
+                    {
+                        xr.ReadStartElement();
+                        fFoundMessageArray = true;
+                        continue;
+                    }
+
+                    // only other valid element is message
+                    if (xr.Name != "Message")
+                        throw new Exception($"Illegal element {xr.Name} under ArrayOfMessages");
+
+                    mmses.Add(WpMessage.CreateFromXmlReader(xr));
+                    continue;
+                }
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name == "ArrayOfMessage")
+                    {
+                        fValidExit = true;
+                        break; // yay done
+                    }
+
+                    throw new Exception($"end element {xr.Name} unexpected");
+                }
+
+                if (nt == XmlNodeType.Attribute)
+                    throw new Exception($"attribute unexpected per schema");
+
+                // all others are just skipped
+                if (!xr.Read())
+                    break;
+            }
+
+            if (!fValidExit)
+                throw new Exception("end of file before end message array");
+
+            // at this point, we have all the SMS messages ready to write
+            return mmses;
+        }
         #region TESTS
         /*----------------------------------------------------------------------------
         	%%Function: WpMessageFromString
