@@ -26,6 +26,8 @@ namespace wp2droidMsg
         {
         }
 
+        public string Text => m_sText;
+
         struct ContentTypeInfo
         {
             public string sCid;
@@ -158,6 +160,7 @@ namespace wp2droidMsg
     public class MmsMessage
     {
         #region Member Variables
+#pragma warning disable CS0649 // never assigned, always default
         private List<MmsAddress> m_plAddresses;
         private List<MmsPart> m_plParts;
 
@@ -218,6 +221,7 @@ namespace wp2droidMsg
         private string m_sM_size; // required, message size
         private string m_sReadable_date; // optional
         private string m_sContact_name; // optional
+#pragma warning restore CS0649 // never assigned, always default
 
         // charsets from https://www.iana.org/assignments/character-sets/character-sets.xhtml
 
@@ -263,6 +267,26 @@ namespace wp2droidMsg
             'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
         };
         #endregion
+
+        public string Date => ReadableDateFromWindowsTimestamp(SmsMessage.MsecWinFromSecondsUnix(m_ulDate));
+
+        public string Text
+        {
+            get
+            {
+                if (m_plParts != null && m_plParts.Count > 0)
+                {
+                    foreach (MmsPart part in m_plParts)
+                    {
+                        if (part.Text != null)
+                            return part.Text;
+                    }
+                }
+
+                return "<null>";
+            }
+        }
+        public string To => m_sAddress;
 
         /*----------------------------------------------------------------------------
         	%%Function: MmsMessage
@@ -324,7 +348,7 @@ namespace wp2droidMsg
                 mms.m_sAddress = AddressBuildFromAddresses(mms.m_plAddresses);
             }
 
-            mms.m_ulDate = SmsMessage.MsecUnixFromSecondWin(wpm.LocalTimestamp);
+            mms.m_ulDate = SmsMessage.SecondsUnixFromMsecWin(wpm.LocalTimestamp);
             mms.m_nRead = wpm.Read ? 1 : 0;
             mms.m_sM_id = CreateRandomCharacterString(c_rgchAscii, 26);
             mms.m_sTr_id = CreateRandomCharacterString(c_rgchAscii, 12);
@@ -466,7 +490,7 @@ namespace wp2droidMsg
         }
 
 
-        static string ReadableDateFromWindowsTimestamp(ulong ulTimestamp)
+        public static string ReadableDateFromWindowsTimestamp(ulong ulTimestamp)
         {
             DateTime dttm = DateTime.FromFileTime((long)ulTimestamp);
             return dttm.ToString("MMM d, yyyy HH:mm:ss");

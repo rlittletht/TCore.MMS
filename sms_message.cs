@@ -17,7 +17,7 @@ namespace wp2droidMsg
     {
         private int m_protocol;
         private string m_sAddress;
-        private ulong m_msecUnixDate;
+        private ulong m_ulUnixDate;
         private int m_type;
         private string m_sSubject;
         private string m_sBody;
@@ -31,6 +31,10 @@ namespace wp2droidMsg
         string m_sContactName;
 
         public SmsMessage() { }
+
+        public string Text => m_sBody;
+        public string To => m_sAddress;
+        public string Date => MmsMessage.ReadableDateFromWindowsTimestamp(SmsMessage.MsecWinFromSecondsUnix(m_ulUnixDate));
 
         public static List<SmsMessage> ReadMessagesFromWpXml(XmlReader xr)
         {
@@ -118,7 +122,7 @@ namespace wp2droidMsg
                 return false;
             if (left.m_sAddress != right.m_sAddress)
                 return false;
-            if (left.m_msecUnixDate != right.m_msecUnixDate)
+            if (left.m_ulUnixDate != right.m_ulUnixDate)
                 return false;
             if (left.m_type != right.m_type)
                 return false;
@@ -154,7 +158,7 @@ namespace wp2droidMsg
             xw.WriteStartElement("sms");
             xw.WriteAttributeString("protocol", m_protocol.ToString());
             xw.WriteAttributeString("address", m_sAddress ?? "");
-            xw.WriteAttributeString("date", m_msecUnixDate.ToString());
+            xw.WriteAttributeString("date", m_ulUnixDate.ToString());
             xw.WriteAttributeString("type", m_type.ToString());
             xw.WriteAttributeString("subject", m_sSubject ?? "null");
             xw.WriteAttributeString("body", m_sBody ?? "null" );
@@ -168,14 +172,19 @@ namespace wp2droidMsg
         }
 
         /*----------------------------------------------------------------------------
-        	%%Function: MsecUnixFromSecondWin
-        	%%Qualified: wp2droidMsg.SmsMessage.MsecUnixFromSecondWin
+        	%%Function: SecondsUnixFromMsecWin
+        	%%Qualified: wp2droidMsg.SmsMessage.SecondsUnixFromMsecWin
         	%%Contact: rlittle
         	
         ----------------------------------------------------------------------------*/
-        public static ulong MsecUnixFromSecondWin(ulong nWpDate)
+        public static ulong SecondsUnixFromMsecWin(ulong nWpDate)
         {
             return (((nWpDate / (10 * 100)) - 116444736000000) + 5) / 10;
+        }
+
+        public static ulong MsecWinFromSecondsUnix(ulong msecUnix)
+        {
+            return 10UL * 100UL * (msecUnix * 10UL + 116444736000000UL);
         }
 
         /*----------------------------------------------------------------------------
@@ -278,7 +287,7 @@ namespace wp2droidMsg
                     if (ulRead == null)
                         break;
 
-                    sms.m_msecUnixDate = MsecUnixFromSecondWin((ulong) ulRead);
+                    sms.m_ulUnixDate = SecondsUnixFromMsecWin((ulong) ulRead);
                     break;
                 case "Sender":
                     string sSender = XmlIO.ReadGenericStringElement(xr, "Sender");
@@ -300,9 +309,9 @@ namespace wp2droidMsg
         [TestCase(131777420586331428UL, 1533268458633UL)]
         [TestCase(131777420698276081UL, 1533268469828UL)]
         [Test]
-        public static void TestMsecUnixFromSecondWin(ulong nWpDate, ulong nExpected)
+        public static void TestSecondsUnixFromMsecWin(ulong nWpDate, ulong nExpected)
         {
-            Assert.AreEqual(nExpected, MsecUnixFromSecondWin(nWpDate));
+            Assert.AreEqual(nExpected, SecondsUnixFromMsecWin(nWpDate));
         }
 
 
@@ -313,7 +322,7 @@ namespace wp2droidMsg
 
             sms.m_protocol = int.Parse(rgs[0]);
             sms.m_sAddress = XmlIO.FromNullable(rgs[1]);
-            sms.m_msecUnixDate = UInt64.Parse(rgs[2]);
+            sms.m_ulUnixDate = UInt64.Parse(rgs[2]);
             sms.m_type = int.Parse(rgs[3]);
             sms.m_sSubject = XmlIO.FromNullable(rgs[4]);
             sms.m_sBody = XmlIO.FromNullable(rgs[5]);
@@ -389,6 +398,16 @@ namespace wp2droidMsg
 
             XmlReader xr = XmlIO.SetupXmlReaderForTest(sTest);
             XmlIO.AdvanceReaderToTestContent(xr, "Message");
+        }
+
+        [TestCase(131271698820000000UL)]
+        [TestCase(231271698820000000UL)]
+        [TestCase(2312716988200000000UL)]
+        [Test]
+        public static void TestDateConversion(ulong ul)
+        {
+            ulong ulUnix = SecondsUnixFromMsecWin(ul);
+            Assert.AreEqual(ul, MsecWinFromSecondsUnix(ulUnix));
         }
         #endregion
     }
