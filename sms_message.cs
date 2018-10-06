@@ -189,7 +189,110 @@ namespace wp2droidMsg
 
         public static SmsMessage CreateFromDroidXmlReader(XmlReader xr)
         {
-            return null;
+            SmsMessage sms = new SmsMessage();
+
+            if (xr.Name != "sms")
+                throw new Exception("not at the correct node");
+
+            bool fEmptySmsElement = xr.IsEmptyElement;
+
+            if (!XmlIO.Read(xr))
+                throw new Exception("nothing to read");
+
+            while (true)
+            {
+                XmlIO.SkipNonContent(xr);
+                XmlNodeType nt = xr.NodeType;
+
+                if (nt == XmlNodeType.Element)
+                    throw new Exception($"unexpected element {xr.Name} under sms element");
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name != "sms")
+                        throw new Exception("unmatched sms element");
+
+                    xr.ReadEndElement();
+                    break;
+                }
+
+                if (xr.NodeType != XmlNodeType.Attribute)
+                    throw new Exception("unexpected non attribute on <sms> element");
+
+                while (true)
+                {
+                    // consume all the attributes
+                    ParseDroidSmsAttribute(xr, sms);
+                    if (!xr.MoveToNextAttribute())
+                    {
+                        if (fEmptySmsElement)
+                        {
+                            xr.Read();  // get past the attribute
+                            return sms;
+                        }
+
+                        break; // continue till we find the end sms element
+                    }
+
+                    // otherwise just continue...
+                }
+
+                if (!XmlIO.Read(xr))
+                    throw new Exception("never encountered end sms element");
+            }
+
+            return sms;
+        }
+
+        public static void ParseDroidSmsAttribute(XmlReader xr, SmsMessage sms)
+        {
+            switch (xr.Name)
+            {
+                case "protocol":
+                    sms.m_protocol = XmlIO.ReadGenericIntElement(xr, "protocol") ?? 0;
+                    break;
+                case "address":
+                    sms.m_sAddress = XmlIO.ReadGenericStringElement(xr, "address");
+                    break;
+                case "date":
+                    sms.m_ulUnixDate = XmlIO.ReadGenericUInt64Element(xr, "date") ?? 0;
+                    break;
+                case "type":
+                    sms.m_type = XmlIO.ReadGenericIntElement(xr, "type") ?? 2; // default is sent?
+                    break;
+                case "subject":
+                    sms.m_sSubject = XmlIO.ReadGenericStringElement(xr, "subject");
+                    break;
+                case "body":
+                    sms.m_sBody = XmlIO.ReadGenericStringElement(xr, "body");
+                    break;
+                case "toa":
+                    sms.m_sToa = XmlIO.ReadGenericNullableStringElement(xr, "toa");
+                    break;
+                case "sc_toa":
+                    sms.m_sSc_Toa = XmlIO.ReadGenericNullableStringElement(xr, "sc_toa");
+                    break;
+                case "service_center":
+                    sms.m_sServiceCenter = XmlIO.ReadGenericNullableStringElement(xr, "service_center");
+                    break;
+                case "read":
+                    sms.m_nRead = XmlIO.ReadGenericIntElement(xr, "read") ?? 0;
+                    break;
+                case "status":
+                    sms.m_nStatus = XmlIO.ReadGenericIntElement(xr, "status") ?? -1;
+                    break;
+                case "locked":
+                    sms.m_nLocked = XmlIO.ReadGenericIntElement(xr, "locked") ?? 0;
+                    break;
+                case "date_sent":
+                    break;
+                case "readable_date":
+                    sms.m_sReadableDate = XmlIO.ReadGenericNullableStringElement(xr, "readable_date");
+                    break;
+                case "contact_name":
+                    sms.m_sContactName = XmlIO.ReadGenericNullableStringElement(xr, "contact_name");
+                    break;
+            }
         }
 
         /*----------------------------------------------------------------------------

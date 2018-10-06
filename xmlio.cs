@@ -10,6 +10,23 @@ namespace wp2droidMsg
     public class XmlIO
     {
         /*----------------------------------------------------------------------------
+        	%%Function: Read
+        	%%Qualified: wp2droidMsg.XmlIO.Read
+        	%%Contact: rlittle
+        	
+            Read, including reading an attribute if its there
+        ----------------------------------------------------------------------------*/
+        public static bool Read(XmlReader xr)
+        {
+            bool f = xr.MoveToNextAttribute();
+
+            if (f)
+                return f;
+
+            return xr.Read();
+        }
+
+        /*----------------------------------------------------------------------------
         	%%Function: StringElementReadFromXml
         	%%Qualified: wp2droidMsg.SmsMessage.StringElementReadFromXml
         	%%Contact: rlittle
@@ -51,6 +68,24 @@ namespace wp2droidMsg
 
             // ReadElementContentAsString advances past the end element, so the parse should
             // be all set. 
+            return s;
+        }
+
+        /*----------------------------------------------------------------------------
+        	%%Function: ReadGenericNullableStringElement
+        	%%Qualified: wp2droidMsg.XmlIO.ReadGenericNullableStringElement
+        	%%Contact: rlittle
+        	
+            Same as ReadGenericStringElement, but recognizes that "null" represents
+            the null value.
+        ----------------------------------------------------------------------------*/
+        public static string ReadGenericNullableStringElement(XmlReader xr, string sElement)
+        {
+            string s = ReadGenericStringElement(xr, sElement);
+
+            if (s == "null")
+                return null;
+
             return s;
         }
 
