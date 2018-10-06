@@ -270,6 +270,7 @@ namespace wp2droidMsg
 
         public string Date => ReadableDateFromWindowsTimestamp(SmsMessage.MsecWinFromSecondsUnix(m_ulDate));
 
+        #region Constructors
         public string Text
         {
             get
@@ -369,6 +370,7 @@ namespace wp2droidMsg
 
             return mms;
         }
+        #endregion
 
         /*----------------------------------------------------------------------------
         	%%Function: AddressBuildFromAddresses
@@ -408,6 +410,88 @@ namespace wp2droidMsg
         public static string Nullable(ulong? n)
         {
             return n == null ? "null" : n.ToString();
+        }
+
+        static void ParseMessageElement(XmlReader xr, WpMessage wpm)
+        {
+            switch (xr.Name)
+            {
+                default:
+                    throw new Exception("Unknown element in MessageAttachment");
+            }
+        }
+
+        public static WpMessage CreateFromXmlReader(XmlReader xr)
+        {
+            WpMessage att = new WpMessage();
+
+            if (xr.Name != "Message")
+                throw new Exception("not at the correct node");
+
+            // finish this start element
+            xr.ReadStartElement();
+
+            while (true)
+            {
+                XmlNodeType nt = xr.NodeType;
+
+                switch (nt)
+                {
+                    case XmlNodeType.EndElement:
+                        if (xr.Name != "Message")
+                            throw new Exception("encountered end node not matching <MessageAttachment>");
+                        xr.ReadEndElement();
+                        return att;
+
+                    case XmlNodeType.Element:
+                        ParseMessageElement(xr, att);
+                        // we should be advanced past the element...
+                        continue;
+                    case XmlNodeType.Attribute:
+                        throw new Exception("there should be no attributes in this schema");
+                }
+                // all others just get skipped (whitespace, cdata, etc...)
+                if (!xr.Read())
+                    break;
+            }
+
+            throw new Exception("hit EOF before finding end MessageAttachment element");
+        }
+
+        public static MmsMessage CreateFromDroidXmlReader(XmlReader xr)
+        {
+            MmsMessage msg = new MmsMessage();
+
+            if (xr.Name != "mms")
+                throw new Exception("not at the correct node");
+
+            // finish this start element
+            xr.ReadStartElement();
+
+            while (true)
+            {
+                XmlNodeType nt = xr.NodeType;
+
+                switch (nt)
+                {
+                    case XmlNodeType.EndElement:
+                        if (xr.Name != "mms")
+                            throw new Exception("encountered end node not matching <mms>");
+                        xr.ReadEndElement();
+                        return msg;
+
+                    case XmlNodeType.Element:
+                        //ParseMessageElement(xr, msg);
+                        // we should be advanced past the element...
+                        continue;
+                    case XmlNodeType.Attribute:
+                        throw new Exception("there should be no attributes in this schema");
+                }
+                // all others just get skipped (whitespace, cdata, etc...)
+                if (!xr.Read())
+                    break;
+            }
+            throw new Exception("hit EOF before finding end mms element");
         }
 
         public void WriteToDroidXml(XmlWriter xw)

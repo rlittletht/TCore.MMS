@@ -187,6 +187,11 @@ namespace wp2droidMsg
             return 10UL * 100UL * (msecUnix * 10UL + 116444736000000UL);
         }
 
+        public static SmsMessage CreateFromDroidXmlReader(XmlReader xr)
+        {
+            return null;
+        }
+
         /*----------------------------------------------------------------------------
         	%%Function: CreateFromXmlReader
         	%%Qualified: wp2droidMsg.SmsMessage.CreateFromXmlReader
@@ -221,7 +226,7 @@ namespace wp2droidMsg
                         return sms;
 
                     case XmlNodeType.Element:
-                        ParseMessageElement(xr, sms);
+                        ParseWPMessageElement(xr, sms);
                         // we should be advanced past the element...
                         continue;
                     case XmlNodeType.Attribute:
@@ -236,14 +241,14 @@ namespace wp2droidMsg
         }
 
         /*----------------------------------------------------------------------------
-        	%%Function: ParseMessageElement
-        	%%Qualified: wp2droidMsg.SmsMessage.ParseMessageElement
+        	%%Function: ParseWPMessageElement
+        	%%Qualified: wp2droidMsg.SmsMessage.ParseWPMessageElement
         	%%Contact: rlittle
         	
             the parser should be positioned at an xml start element, ready for us
             to parse the element into the given sms
         ----------------------------------------------------------------------------*/
-        static void ParseMessageElement(XmlReader xr, SmsMessage sms)
+        static void ParseWPMessageElement(XmlReader xr, SmsMessage sms)
         {
             switch (xr.Name)
             {

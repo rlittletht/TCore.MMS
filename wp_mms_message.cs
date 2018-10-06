@@ -366,7 +366,6 @@ namespace wp2droidMsg
 
             throw new Exception("hit EOF before finding end MessageAttachment element");
         }
-        #endregion
 
         public static List<WpMessage> ReadMessagesFromXml(XmlReader xr)
         {
@@ -424,6 +423,9 @@ namespace wp2droidMsg
             // at this point, we have all the SMS messages ready to write
             return mmses;
         }
+        #endregion
+
+
         #region TESTS
         /*----------------------------------------------------------------------------
         	%%Function: WpMessageFromString

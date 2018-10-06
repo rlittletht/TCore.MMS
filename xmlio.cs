@@ -9,7 +9,6 @@ namespace wp2droidMsg
 {
     public class XmlIO
     {
-
         /*----------------------------------------------------------------------------
         	%%Function: StringElementReadFromXml
         	%%Qualified: wp2droidMsg.SmsMessage.StringElementReadFromXml
@@ -33,6 +32,11 @@ namespace wp2droidMsg
         {
             if (xr.Name != sElement)
                 throw new Exception("not at the correct node");
+
+            if (xr.NodeType == XmlNodeType.Attribute)
+            {
+                return xr.Value;
+            }
 
             if (xr.IsEmptyElement)
             {
@@ -72,7 +76,7 @@ namespace wp2droidMsg
         	
             read the given element as an integer
         ----------------------------------------------------------------------------*/
-        private static int? ReadGenericIntElement(XmlReader xr, string sElement)
+        public static int? ReadGenericIntElement(XmlReader xr, string sElement)
         {
             return ConvertElementStringToInt(ReadGenericStringElement(xr, sElement));
         }
@@ -241,7 +245,7 @@ namespace wp2droidMsg
         {
             while (!FIsContentNode(xr.NodeType))
             {
-                if (!xr.Read())
+                if (!xr.MoveToNextAttribute() && !xr.Read())
                     break;
             }
         }
