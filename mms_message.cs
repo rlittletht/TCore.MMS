@@ -21,6 +21,7 @@ namespace wp2droidMsg
         private string m_sCtt_t;
         private string m_sText;
         private string m_sData; //optional
+        private int m_nSef_type;
 
         public MmsPart()
         {
@@ -103,6 +104,125 @@ namespace wp2droidMsg
             return mmsp;
         }
 
+        public static void ParseDroidPartAttribute(XmlReader xr, MmsPart part)
+        {
+            switch (xr.Name)
+            {
+                case "seq": part.m_nSeq = XmlIO.ReadGenericIntElement(xr, "seq") ?? 0; break;
+                case "ct": part.m_sCt = XmlIO.ReadGenericStringElement(xr, "ct"); break;
+                case "name": part.m_sName = XmlIO.ReadGenericNullableStringElement(xr, "name"); break;
+                case "chset": part.m_sChset= XmlIO.ReadGenericNullableStringElement(xr, "chset"); break;
+                case "cd": part.m_sCd = XmlIO.ReadGenericNullableStringElement(xr, "cd"); break;
+                case "fn": part.m_sFn = XmlIO.ReadGenericNullableStringElement(xr, "fn"); break;
+                case "cid": part.m_sCid = XmlIO.ReadGenericNullableStringElement(xr, "cid"); break;
+                case "cl": part.m_sCl = XmlIO.ReadGenericNullableStringElement(xr, "cl"); break;
+                case "ctt_s": part.m_sCtt_s = XmlIO.ReadGenericNullableStringElement(xr, "ctt_s"); break;
+                case "ctt_t": part.m_sCtt_t = XmlIO.ReadGenericNullableStringElement(xr, "ctt_t"); break;
+                case "text": part.m_sText = XmlIO.ReadGenericNullableStringElement(xr, "text"); break;
+                case "sef_type": part.m_nSef_type = XmlIO.ReadGenericIntElement(xr, "sef_type") ?? 0; break;
+                case "data": part.m_sData = XmlIO.ReadGenericNullableStringElement(xr, "data"); break;
+            }
+        }
+
+        public static MmsPart CreateFromDroidXml(XmlReader xr)
+        {
+            if (xr.Name != "part")
+                throw new Exception("not at correct location to read part");
+
+            MmsPart part = new MmsPart();
+            bool fEmptyPartElement = xr.IsEmptyElement;
+
+            XmlIO.Read(xr); // read including attributes
+
+            while (true)
+            {
+                XmlIO.SkipNonContent(xr);
+                XmlNodeType nt = xr.NodeType;
+
+                // PUT MMS children here
+                if (nt == XmlNodeType.Element)
+                    throw new Exception($"unexpected element {xr.Name} under part element");
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name != "part")
+                        throw new Exception("unmatched par element");
+
+                    xr.ReadEndElement();
+                    break;
+                }
+
+                if (xr.NodeType != XmlNodeType.Attribute)
+                    throw new Exception("unexpected non attribute on <sms> element");
+
+                while (true)
+                {
+                    // consume all the attributes
+                    ParseDroidPartAttribute(xr, part);
+                    if (!xr.MoveToNextAttribute())
+                    {
+                        if (fEmptyPartElement)
+                        {
+                            xr.Read(); // get past the attribute
+                            return part;
+                        }
+
+                        break; // continue till we find the end part element
+                    }
+
+                    // otherwise just continue...
+                }
+
+                if (!XmlIO.Read(xr))
+                    throw new Exception("never encountered end part element");
+            }
+
+            return part;
+        }
+
+        public static List<MmsPart> CreatePartsFromDroidXml(XmlReader xr)
+        {
+            if (xr.Name != "parts")
+                throw new Exception("not at correct location to read parts");
+
+            if (xr.IsEmptyElement)
+                return null;
+
+            List<MmsPart> parts = new List<MmsPart>();
+
+            xr.ReadStartElement();
+
+            while (true)
+            {
+                XmlNodeType nt = xr.NodeType;
+
+                if (nt == XmlNodeType.Element)
+                {
+                    if (xr.Name == "part")
+                    {
+                        parts.Add(CreateFromDroidXml(xr));
+                        continue;
+                    }
+
+                    throw new Exception($"unknown element {xr.Name} under parts element");
+                }
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name == "parts")
+                    {
+                        xr.ReadEndElement();
+                        return parts;
+                    }
+
+                    throw new Exception($"unmatched parts element with {xr.Name}");
+                }
+
+                if (!xr.Read())
+                    throw new Exception("xml read ended before parts closed");
+            }
+        }
+
         public void WriteToDroidXml(XmlWriter xw)
         {
             xw.WriteStartElement("part");
@@ -118,6 +238,7 @@ namespace wp2droidMsg
             xw.WriteAttributeString("ctt_s", MmsMessage.Nullable(m_sCtt_s));   // converted
             xw.WriteAttributeString("ctt_t", MmsMessage.Nullable(m_sCtt_t));   // converted
             xw.WriteAttributeString("text", MmsMessage.Nullable(m_sText));   // converted
+            xw.WriteAttributeString("sef_type", m_nSef_type.ToString());   // converted
             if (m_sData != null)
                 xw.WriteAttributeString("data", MmsMessage.Nullable(m_sData));   // converted
 
@@ -140,6 +261,10 @@ namespace wp2droidMsg
 
         public string Address => m_sAddress;
 
+        public MmsAddress()
+        {
+        }
+
         public MmsAddress(string sAddress, int nType, int nCharset)
         {
             m_sAddress = sAddress;
@@ -147,10 +272,69 @@ namespace wp2droidMsg
             m_nCharset = nCharset;
         }
 
+        public static void ParseDroidMmsAttribute(XmlReader xr, MmsAddress addr)
+        {
+            switch (xr.Name)
+            {
+                case "address":
+                    addr.m_sAddress = XmlIO.ReadGenericNullableStringElement(xr, "address");
+                    break;
+                case "type":
+                    addr.m_nType = XmlIO.ReadGenericIntElement(xr, "type") ?? 0;
+                    break;
+                case "charset":
+                    addr.m_nCharset = XmlIO.ReadGenericIntElement(xr, "charset") ?? 0;
+                    break;
+            }
+        }
+
+        public static List<MmsAddress> CreateAddressesFromDroidXml(XmlReader xr)
+        {
+            if (xr.Name != "addrs")
+                throw new Exception("not at correct location to read addrs");
+
+            if (xr.IsEmptyElement)
+                return null;
+
+            List<MmsAddress> addrs = new List<MmsAddress>();
+
+            xr.ReadStartElement();
+
+            while (true)
+            {
+                XmlNodeType nt = xr.NodeType;
+
+                if (nt == XmlNodeType.Element)
+                {
+                    if (xr.Name == "addr")
+                    {
+                        addrs.Add(XmlReadTemplates<MmsAddress>.ParseSingleElementWithAttributes(xr, "addr", ParseDroidMmsAttribute));
+                        continue;
+                    }
+
+                    throw new Exception($"unknown element {xr.Name} under addrs element");
+                }
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name == "addrs")
+                    {
+                        xr.ReadEndElement();
+                        return addrs;
+                    }
+
+                    throw new Exception($"unmatched addrs element with {xr.Name}");
+                }
+
+                if (!xr.Read())
+                    throw new Exception("xml read ended before addrs closed");
+            }
+        }
+
         public void WriteToDroidXml(XmlWriter xw)
         {
             xw.WriteStartElement("addr");
-            xw.WriteAttributeString("address", m_sAddress);
+            xw.WriteAttributeString("address", MmsMessage.Nullable(m_sAddress));
             xw.WriteAttributeString("charset", m_nCharset.ToString());
             xw.WriteAttributeString("type", m_nType.ToString());
             xw.WriteEndElement();
@@ -203,11 +387,11 @@ namespace wp2droidMsg
         private int m_nDate_sent; // required, date sent
         private int m_nRead; // required, read
         private string m_sRpt_a; // required, report allowed
-        private int m_nPri; // required, priority
+        private int? m_nPri; // required, priority
         private string m_sResp_txt; // required, response text
         private int m_nD_rpt; // required, delivery report
         private int m_nType; // required, message type
-        private int m_nRr; // required, read report
+        private int? m_nRr; // required, read report
         private string m_sSub; // optional, subject
         private string m_sRead_status; // required, read status
         private int m_nSeen;
@@ -412,40 +596,143 @@ namespace wp2droidMsg
             return n == null ? "null" : n.ToString();
         }
 
+        public static void ParseDroidMmsAttribute(XmlReader xr, MmsMessage mms)
+        {
+
+            switch (xr.Name)
+            {
+                case "date": mms.m_ulDate = XmlIO.ReadGenericUInt64Element(xr, "date") ?? 0;  break;
+                case "spam_report": mms.m_nSpam_report = XmlIO.ReadGenericIntElement(xr, "spam_report") ?? 0; break;
+                case "ct_t": mms.m_sCt_t = XmlIO.ReadGenericNullableStringElement(xr, "ct_t"); break;
+                case "msg_box": mms.m_nMsg_box = XmlIO.ReadGenericIntElement(xr, "msg_box") ?? 0; break;
+                case "address": mms.m_sAddress = XmlIO.ReadGenericStringElement(xr, "address"); break;
+                case "sub_cs": mms.m_sSub_cs = XmlIO.ReadGenericNullableStringElement(xr, "sub_cs"); break;
+                case "retr_st": mms.m_sRetr_st = XmlIO.ReadGenericNullableStringElement(xr, "retr_st"); break;
+                case "d_tm": mms.m_sD_tm = XmlIO.ReadGenericNullableStringElement(xr, "d_tm"); break;
+                case "exp": mms.m_sExp = XmlIO.ReadGenericNullableStringElement(xr, "exp"); break;
+                case "msg_id": mms.m_sMsg_id = XmlIO.ReadGenericNullableStringElement(xr, "msg_id"); break;
+                case "app_id": mms.m_sApp_id = XmlIO.ReadGenericNullableStringElement(xr, "app_id"); break;
+                case "from_address": mms.m_sFrom_address = XmlIO.ReadGenericNullableStringElement(xr, "from_address"); break;
+                case "m_id": mms.m_sM_id = XmlIO.ReadGenericNullableStringElement(xr, "m_id"); break;
+                case "retr_txt": mms.m_sRetr_txt = XmlIO.ReadGenericNullableStringElement(xr, "retr_txt"); break;
+                case "date_sent": mms.m_nDate_sent = XmlIO.ReadGenericIntElement(xr, "date_sent") ?? 0; break;
+                case "rpt_a": mms.m_sRpt_a = XmlIO.ReadGenericNullableStringElement(xr, "rpt_a"); break;
+                case "ct_cls": mms.m_sCt_cls = XmlIO.ReadGenericNullableStringElement(xr, "ct_cls"); break;
+                case "sub_id": mms.m_sSub_id = XmlIO.ReadGenericNullableStringElement(xr, "sub_id"); break;
+                case "resp_txt": mms.m_sResp_txt = XmlIO.ReadGenericNullableStringElement(xr, "resp_txt"); break;
+                case "ct_l": mms.m_sCt_l = XmlIO.ReadGenericNullableStringElement(xr, "ct_l"); break;
+                case "reserved": mms.m_nReserved = XmlIO.ReadGenericIntElement(xr, "reserved") ?? 0; break;
+                case "m_type": mms.m_nType = XmlIO.ReadGenericIntElement(xr, "m_type") ?? 0; break;
+                case "sub": mms.m_sSub = XmlIO.ReadGenericNullableStringElement(xr, "sub"); break;
+                case "read_status": mms.m_sRead_status = XmlIO.ReadGenericNullableStringElement(xr, "read_status"); break;
+                case "device_name": mms.m_sDevice_name = XmlIO.ReadGenericNullableStringElement(xr, "device_name"); break;
+                case "resp_st": mms.m_sResp_st = XmlIO.ReadGenericNullableStringElement(xr, "resp_st"); break;
+                case "st": mms.m_sSt = XmlIO.ReadGenericNullableStringElement(xr, "st"); break;
+                case "retr_txt_cs": mms.m_sRetr_txt_cs = XmlIO.ReadGenericNullableStringElement(xr, "retr_txt_cs"); break;
+                case "creator": mms.m_sCreator = XmlIO.ReadGenericNullableStringElement(xr, "creator"); break;
+                case "m_size": mms.m_sM_size = XmlIO.ReadGenericNullableStringElement(xr, "m_size"); break;
+                case "sim_imsi": mms.m_sSim_imsi = XmlIO.ReadGenericNullableStringElement(xr, "sim_imsi"); break;
+                case "tr_id": mms.m_sTr_id = XmlIO.ReadGenericNullableStringElement(xr, "tr_id"); break;
+                case "m_cls": mms.m_sM_cls = XmlIO.ReadGenericNullableStringElement(xr, "m_cls"); break;
+                case "readable_date": mms.m_sReadable_date = XmlIO.ReadGenericNullableStringElement(xr, "readable_date"); break;
+                case "contact_name": mms.m_sContact_name = XmlIO.ReadGenericNullableStringElement(xr, "contact_name"); break;
+                case "locked": mms.m_nLocked = XmlIO.ReadGenericIntElement(xr, "locked") ?? 0; break;
+                case "read": mms.m_nRead = XmlIO.ReadGenericIntElement(xr, "read") ?? 0; break;
+                case "pri": mms.m_nPri = XmlIO.ReadGenericIntElement(xr, "pri"); break;
+                case "d_rpt": mms.m_nD_rpt = XmlIO.ReadGenericIntElement(xr, "d_rpt") ?? 0; break;
+                case "using_mode": mms.m_nUsing_mode = XmlIO.ReadGenericIntElement(xr, "using_mode") ?? 0; break;
+                case "rr_st": mms.m_nRr_st = XmlIO.ReadGenericIntElement(xr, "rr_st") ?? 0; break;
+                case "favorite": mms.m_nFavorite = XmlIO.ReadGenericIntElement(xr, "favorite") ?? 0; break;
+                case "rr": mms.m_nRr = XmlIO.ReadGenericIntElement(xr, "rr"); break;
+                case "hidden": mms.m_nHidden = XmlIO.ReadGenericIntElement(xr, "hidden") ?? 0; break;
+                case "deletable": mms.m_nDeletable = XmlIO.ReadGenericIntElement(xr, "deletable") ?? 0; break;
+                case "d_rpt_st": mms.m_nD_rpt_st = XmlIO.ReadGenericIntElement(xr, "d_rpt_st") ?? 0; break;
+                case "callback_set": mms.m_nCallback_set = XmlIO.ReadGenericIntElement(xr, "callback_set") ?? 0; break;
+                case "seen": mms.m_nSeen = XmlIO.ReadGenericIntElement(xr, "seen") ?? 0; break;
+                case "text_only": mms.m_nText_only = XmlIO.ReadGenericIntElement(xr, "text_only") ?? 0; break;
+                case "sim_slot": mms.m_nSim_slot = XmlIO.ReadGenericIntElement(xr, "sim_slot") ?? 0; break;
+                case "v": mms.m_nV = XmlIO.ReadGenericIntElement(xr, "v") ?? 0; break;
+                case "safe_message": mms.m_nSafe_message = XmlIO.ReadGenericIntElement(xr, "safe_message") ?? 0; break;
+                case "secret_mode": mms.m_nSecret_mode = XmlIO.ReadGenericIntElement(xr, "secret_mode") ?? 0; break;
+            }
+        }
+
+        static void ParseMmsMessageElement(XmlReader xr, MmsMessage mms)
+        {
+            switch (xr.Name)
+            {
+                case "parts":
+                    mms.m_plParts = MmsPart.CreatePartsFromDroidXml(xr);
+                    break;
+                case "addrs":
+                    mms.m_plAddresses = MmsAddress.CreateAddressesFromDroidXml(xr);
+                    break;
+                default:
+                    throw new Exception($"unknown element {xr.Name} under mms message");
+            }
+
+        }
+
         public static MmsMessage CreateFromDroidXmlReader(XmlReader xr)
         {
-            MmsMessage msg = new MmsMessage();
+            MmsMessage mms = new MmsMessage();
 
             if (xr.Name != "mms")
                 throw new Exception("not at the correct node");
 
-            // finish this start element
-            xr.ReadStartElement();
+            bool fEmptyMmsElement = xr.IsEmptyElement;
+
+            if (!XmlIO.Read(xr))
+                throw new Exception("nothing to read");
 
             while (true)
             {
+                XmlIO.SkipNonContent(xr);
                 XmlNodeType nt = xr.NodeType;
 
-                switch (nt)
+                // PUT MMS children here
+                if (nt == XmlNodeType.Element)
                 {
-                    case XmlNodeType.EndElement:
-                        if (xr.Name != "mms")
-                            throw new Exception("encountered end node not matching <mms>");
-                        xr.ReadEndElement();
-                        return msg;
-
-                    case XmlNodeType.Element:
-                        //ParseMessageElement(xr, msg);
-                        // we should be advanced past the element...
-                        continue;
-                    case XmlNodeType.Attribute:
-                        throw new Exception("there should be no attributes in this schema");
+                    ParseMmsMessageElement(xr, mms);
+                    continue;
                 }
-                // all others just get skipped (whitespace, cdata, etc...)
-                if (!xr.Read())
+
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name != "mms")
+                        throw new Exception("unmatched sms element");
+
+                    xr.ReadEndElement();
                     break;
+                }
+
+                if (xr.NodeType != XmlNodeType.Attribute)
+                    throw new Exception("unexpected non attribute on <sms> element");
+
+                while (true)
+                {
+                    // consume all the attributes
+                    ParseDroidMmsAttribute(xr, mms);
+                    if (!xr.MoveToNextAttribute())
+                    {
+                        if (fEmptyMmsElement)
+                        {
+                            xr.Read();  // get past the attribute
+                            return mms;
+                        }
+
+                        break; // continue till we find the end sms element
+                    }
+
+                    // otherwise just continue...
+                }
+
+                if (!XmlIO.Read(xr))
+                    throw new Exception("never encountered end sms element");
             }
-            throw new Exception("hit EOF before finding end mms element");
+
+            return mms;
         }
 
         public void WriteToDroidXml(XmlWriter xw)

@@ -7,6 +7,67 @@ using NUnit.Framework;
 
 namespace wp2droidMsg
 {
+    public class XmlReadTemplates<T> where T : new()
+    {
+        public delegate void ParseAttribute(XmlReader xr, T t);
+
+        public static T ParseSingleElementWithAttributes(XmlReader xr, string sElement, ParseAttribute parseAttribute)
+        {
+            T t = new T();
+
+            if (xr.Name != sElement)
+                throw new Exception($"not at correct location to read {sElement}");
+
+            bool fEmptyElement = xr.IsEmptyElement;
+
+            XmlIO.Read(xr); // read including attributes
+
+            while (true)
+            {
+                XmlIO.SkipNonContent(xr);
+                XmlNodeType nt = xr.NodeType;
+
+                // PUT MMS children here
+                if (nt == XmlNodeType.Element)
+                    throw new Exception($"unexpected element {xr.Name} under {sElement} element");
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name != sElement)
+                        throw new Exception($"unmatched {sElement} element");
+
+                    xr.ReadEndElement();
+                    break;
+                }
+
+                if (xr.NodeType != XmlNodeType.Attribute)
+                    throw new Exception($"unexpected non attribute on <{sElement}> element");
+
+                while (true)
+                {
+                    // consume all the attributes
+                    parseAttribute(xr, t);
+                    if (!xr.MoveToNextAttribute())
+                    {
+                        if (fEmptyElement)
+                        {
+                            xr.Read(); // get past the attribute
+                            return t;
+                        }
+
+                        break; // continue till we find the end element
+                    }
+
+                    // otherwise just continue...
+                }
+
+                if (!XmlIO.Read(xr))
+                    throw new Exception($"never encountered end {sElement} element");
+            }
+
+            return t;
+        }
+    }
     public class XmlIO
     {
         /*----------------------------------------------------------------------------
@@ -98,7 +159,7 @@ namespace wp2droidMsg
         ----------------------------------------------------------------------------*/
         private static int? ConvertElementStringToInt(string sElementString)
         {
-            if (sElementString != null)
+            if (sElementString != null && sElementString != "null")
                 return Int32.Parse(sElementString);
 
             return null;

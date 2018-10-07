@@ -48,6 +48,15 @@ namespace TCore.StreamFix
 
                 if (sLeadNCR == null)
                 {
+                    int nNcr = UInt16.Parse(sNCR.Substring(2, sNCR.Length - 3));
+                    if (nNcr < 32)
+                    {
+                        // don't touch control words
+                        byte[] rgb = System.Text.Encoding.UTF8.GetBytes(sNCR);
+                        stmOut.Write(rgb, 0, rgb.Length);
+                        continue;
+                    }
+
                     sLeadNCR = sNCR;
                     continue;
                 }

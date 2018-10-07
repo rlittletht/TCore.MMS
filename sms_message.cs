@@ -196,6 +196,12 @@ namespace wp2droidMsg
             return 10UL * 100UL * (msecUnix * 10UL + 116444736000000UL);
         }
 
+        /*----------------------------------------------------------------------------
+        	%%Function: CreateFromDroidXmlReader
+        	%%Qualified: wp2droidMsg.SmsMessage.CreateFromDroidXmlReader
+        	%%Contact: rlittle
+        	
+        ----------------------------------------------------------------------------*/
         public static SmsMessage CreateFromDroidXmlReader(XmlReader xr)
         {
             SmsMessage sms = new SmsMessage();
