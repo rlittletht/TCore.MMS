@@ -29,6 +29,7 @@ namespace wp2droidMsg
         private int m_nLocked;
         private string m_sReadableDate;
         string m_sContactName;
+        private string m_sDateSent;
 
         public SmsMessage() { }
 
@@ -146,6 +147,8 @@ namespace wp2droidMsg
                 return false;
             if (left.m_sContactName != right.m_sContactName)
                 return false;
+            if (left.m_sDateSent != right.m_sDateSent)
+                return false;
 
             return true;
         }
@@ -168,6 +171,12 @@ namespace wp2droidMsg
             xw.WriteAttributeString("read", m_nRead.ToString());
             xw.WriteAttributeString("status", m_nStatus.ToString());
             xw.WriteAttributeString("locked", m_nLocked.ToString());
+            if (m_sReadableDate != null)
+                xw.WriteAttributeString("readable_date", m_sReadableDate);
+            if (m_sContactName != null)
+                xw.WriteAttributeString("contact_name", m_sContactName);
+            if (m_sDateSent != null)
+                xw.WriteAttributeString("date_sent", m_sDateSent);
             xw.WriteEndElement();
         }
 
@@ -285,6 +294,7 @@ namespace wp2droidMsg
                     sms.m_nLocked = XmlIO.ReadGenericIntElement(xr, "locked") ?? 0;
                     break;
                 case "date_sent":
+                    sms.m_sDateSent = XmlIO.ReadGenericStringElement(xr, "date_sent");
                     break;
                 case "readable_date":
                     sms.m_sReadableDate = XmlIO.ReadGenericNullableStringElement(xr, "readable_date");
