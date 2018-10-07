@@ -60,6 +60,12 @@ namespace wp2droidMsg
             return new ContentTypeInfo("unknown", "");
         }
 
+        /*----------------------------------------------------------------------------
+        	%%Function: CreateFromWpAttachment
+        	%%Qualified: wp2droidMsg.MmsPart.CreateFromWpAttachment
+        	%%Contact: rlittle
+        	
+        ----------------------------------------------------------------------------*/
         public static MmsPart CreateFromWpAttachment(WpMessageAttachment att, ref int seq, int locationIndex)
         {
             MmsPart mmsp = new MmsPart();
@@ -126,101 +132,19 @@ namespace wp2droidMsg
 
         public static MmsPart CreateFromDroidXml(XmlReader xr)
         {
-            if (xr.Name != "part")
-                throw new Exception("not at correct location to read part");
-
-            MmsPart part = new MmsPart();
-            bool fEmptyPartElement = xr.IsEmptyElement;
-
-            XmlIO.Read(xr); // read including attributes
-
-            while (true)
-            {
-                XmlIO.SkipNonContent(xr);
-                XmlNodeType nt = xr.NodeType;
-
-                // PUT MMS children here
-                if (nt == XmlNodeType.Element)
-                    throw new Exception($"unexpected element {xr.Name} under part element");
-
-                if (nt == XmlNodeType.EndElement)
-                {
-                    if (xr.Name != "part")
-                        throw new Exception("unmatched par element");
-
-                    xr.ReadEndElement();
-                    break;
-                }
-
-                if (xr.NodeType != XmlNodeType.Attribute)
-                    throw new Exception("unexpected non attribute on <sms> element");
-
-                while (true)
-                {
-                    // consume all the attributes
-                    ParseDroidPartAttribute(xr, part);
-                    if (!xr.MoveToNextAttribute())
-                    {
-                        if (fEmptyPartElement)
-                        {
-                            xr.Read(); // get past the attribute
-                            return part;
-                        }
-
-                        break; // continue till we find the end part element
-                    }
-
-                    // otherwise just continue...
-                }
-
-                if (!XmlIO.Read(xr))
-                    throw new Exception("never encountered end part element");
-            }
-
-            return part;
+            return XmlReadTemplates<MmsPart>.ParseSingleElementWithAttributes(xr, "part", ParseDroidPartAttribute);
         }
+        
 
+        /*----------------------------------------------------------------------------
+        	%%Function: CreatePartsFromDroidXml
+        	%%Qualified: wp2droidMsg.MmsPart.CreatePartsFromDroidXml
+        	%%Contact: rlittle
+        	
+        ----------------------------------------------------------------------------*/
         public static List<MmsPart> CreatePartsFromDroidXml(XmlReader xr)
         {
-            if (xr.Name != "parts")
-                throw new Exception("not at correct location to read parts");
-
-            if (xr.IsEmptyElement)
-                return null;
-
-            List<MmsPart> parts = new List<MmsPart>();
-
-            xr.ReadStartElement();
-
-            while (true)
-            {
-                XmlNodeType nt = xr.NodeType;
-
-                if (nt == XmlNodeType.Element)
-                {
-                    if (xr.Name == "part")
-                    {
-                        parts.Add(CreateFromDroidXml(xr));
-                        continue;
-                    }
-
-                    throw new Exception($"unknown element {xr.Name} under parts element");
-                }
-
-                if (nt == XmlNodeType.EndElement)
-                {
-                    if (xr.Name == "parts")
-                    {
-                        xr.ReadEndElement();
-                        return parts;
-                    }
-
-                    throw new Exception($"unmatched parts element with {xr.Name}");
-                }
-
-                if (!xr.Read())
-                    throw new Exception("xml read ended before parts closed");
-            }
+            return XmlReadTemplates<MmsPart>.ReadListOfSingleElements(xr, "parts", "part", CreateFromDroidXml);
         }
 
         public void WriteToDroidXml(XmlWriter xw)
@@ -288,47 +212,18 @@ namespace wp2droidMsg
             }
         }
 
+        /*----------------------------------------------------------------------------
+        	%%Function: CreateAddressesFromDroidXml
+        	%%Qualified: wp2droidMsg.MmsAddress.CreateAddressesFromDroidXml
+        	%%Contact: rlittle
+        	
+        ----------------------------------------------------------------------------*/
         public static List<MmsAddress> CreateAddressesFromDroidXml(XmlReader xr)
         {
-            if (xr.Name != "addrs")
-                throw new Exception("not at correct location to read addrs");
-
-            if (xr.IsEmptyElement)
-                return null;
-
-            List<MmsAddress> addrs = new List<MmsAddress>();
-
-            xr.ReadStartElement();
-
-            while (true)
-            {
-                XmlNodeType nt = xr.NodeType;
-
-                if (nt == XmlNodeType.Element)
-                {
-                    if (xr.Name == "addr")
-                    {
-                        addrs.Add(XmlReadTemplates<MmsAddress>.ParseSingleElementWithAttributes(xr, "addr", ParseDroidMmsAttribute));
-                        continue;
-                    }
-
-                    throw new Exception($"unknown element {xr.Name} under addrs element");
-                }
-
-                if (nt == XmlNodeType.EndElement)
-                {
-                    if (xr.Name == "addrs")
-                    {
-                        xr.ReadEndElement();
-                        return addrs;
-                    }
-
-                    throw new Exception($"unmatched addrs element with {xr.Name}");
-                }
-
-                if (!xr.Read())
-                    throw new Exception("xml read ended before addrs closed");
-            }
+            return XmlReadTemplates<MmsAddress>.ReadListOfSingleElements(xr, "addrs", "addr",
+                ((reader) =>
+                    XmlReadTemplates<MmsAddress>.ParseSingleElementWithAttributes(reader, "addr",
+                        ParseDroidMmsAttribute)));
         }
 
         public void WriteToDroidXml(XmlWriter xw)

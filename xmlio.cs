@@ -10,7 +10,58 @@ namespace wp2droidMsg
     public class XmlReadTemplates<T> where T : new()
     {
         public delegate void ParseAttribute(XmlReader xr, T t);
+        public delegate T CreateFromXmlElement(XmlReader xr);
 
+        public static List<T> ReadListOfSingleElements(XmlReader xr, string sParentElement, string sElement, CreateFromXmlElement createFromXmlElement)
+        {
+            if (xr.Name != sParentElement)
+                throw new Exception($"not at correct location to read {sParentElement}");
+
+            if (xr.IsEmptyElement)
+                return null;
+
+            List<T> elts = new List<T>();
+
+            xr.ReadStartElement();
+
+            while (true)
+            {
+                XmlNodeType nt = xr.NodeType;
+
+                if (nt == XmlNodeType.Element)
+                {
+                    if (xr.Name == sElement)
+                    {
+                        elts.Add(createFromXmlElement(xr));
+                        continue;
+                    }
+
+                    throw new Exception($"unknown element {xr.Name} under {sParentElement} element");
+                }
+
+                if (nt == XmlNodeType.EndElement)
+                {
+                    if (xr.Name == sParentElement)
+                    {
+                        xr.ReadEndElement();
+                        return elts;
+                    }
+
+                    throw new Exception($"unmatched {sParentElement} element with {xr.Name}");
+                }
+
+                if (!xr.Read())
+                    throw new Exception("xml read ended before {sParentElement} closed");
+            }
+        }
+
+
+        /*----------------------------------------------------------------------------
+        	%%Function: ParseSingleElementWithAttributes
+        	%%Qualified: wp2droidMsg.XmlReadTemplates<T>.ParseSingleElementWithAttributes
+        	%%Contact: rlittle
+        	
+        ----------------------------------------------------------------------------*/
         public static T ParseSingleElementWithAttributes(XmlReader xr, string sElement, ParseAttribute parseAttribute)
         {
             T t = new T();
