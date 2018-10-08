@@ -37,6 +37,11 @@ namespace wp2droidMsg
         public string To => m_sAddress;
         public string Date => MmsMessage.ReadableDateFromWindowsTimestamp(SmsMessage.MsecWinFromSecondsUnix(m_ulUnixDate));
 
+        public bool AddressContains(string sAddrPart)
+        {
+            return (m_sAddress.Contains(sAddrPart));
+        }
+
         public static List<SmsMessage> ReadMessagesFromWpXml(XmlReader xr)
         {
             if (!xr.Read())

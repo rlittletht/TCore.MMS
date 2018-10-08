@@ -99,7 +99,10 @@ namespace wp2droidMsg
             else
             {
                 mmsp.m_sChset = null;
-                mmsp.m_sData = att.Data;
+                if (att.ContentType == "application/smil")
+                    mmsp.m_sData = null;
+                else
+                    mmsp.m_sData = att.Data;
             }
 
             mmsp.m_sCid = $"<{cti.sCid}>";
@@ -194,6 +197,11 @@ namespace wp2droidMsg
             m_sAddress = sAddress;
             m_nType = nType;
             m_nCharset = nCharset;
+        }
+
+        public bool Contains(string sAddrPart)
+        {
+            return m_sAddress.Contains(sAddrPart);
         }
 
         public static void ParseDroidMmsAttribute(XmlReader xr, MmsAddress addr)
@@ -415,7 +423,7 @@ namespace wp2droidMsg
                 mms.m_nMsg_box = s_MESSAGEBOX_RECEIVED;
                 mms.m_sExp = "null";
                 mms.m_sResp_st = "null";
-                mms.m_sAddress = wpm.Sender;
+                mms.m_sAddress = AddressBuildFromAddresses(mms.m_plAddresses);
             }
             else
             {
@@ -462,6 +470,9 @@ namespace wp2droidMsg
             StringBuilder sb = new StringBuilder();
             foreach (MmsAddress mma in pladdr)
             {
+                if (mma.Address == "insert-address-token")
+                    continue;
+
                 if (sb.Length > 0)
                     sb.Append("~");
                 sb.Append(mma.Address);
@@ -470,7 +481,16 @@ namespace wp2droidMsg
             return sb.ToString();
         }
 
+        public bool AddressContains(string sAddrPart)
+        {
+            foreach (MmsAddress addr in m_plAddresses)
+            {
+                if (addr.Contains(sAddrPart))
+                    return true;
+            }
 
+            return false;
+        }
         public static string Nullable(string s)
         {
             return s ?? "null";

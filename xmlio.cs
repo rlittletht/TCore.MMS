@@ -20,7 +20,7 @@ namespace wp2droidMsg
             if (xr.IsEmptyElement)
                 return null;
 
-            List<T> elts = new List<T>();
+            List<T> t = new List<T>();
 
             xr.ReadStartElement();
 
@@ -32,7 +32,7 @@ namespace wp2droidMsg
                 {
                     if (xr.Name == sElement)
                     {
-                        elts.Add(createFromXmlElement(xr));
+                        t.Add(createFromXmlElement(xr));
                         continue;
                     }
 
@@ -44,14 +44,14 @@ namespace wp2droidMsg
                     if (xr.Name == sParentElement)
                     {
                         xr.ReadEndElement();
-                        return elts;
+                        return t;
                     }
 
                     throw new Exception($"unmatched {sParentElement} element with {xr.Name}");
                 }
 
                 if (!xr.Read())
-                    throw new Exception("xml read ended before {sParentElement} closed");
+                    throw new Exception("xml read ended before {sParentElement closed");
             }
         }
 
